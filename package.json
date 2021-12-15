@@ -1,0 +1,10 @@
+{
+  "type": "module",
+  "dependencies": {
+    "got": "^12.0.0",
+    "just-clone": "^5.0.1",
+    "puppeteer": "^13.0.0",
+    "puppeteer-extra": "^3.2.3",
+    "puppeteer-extra-plugin-stealth": "^2.9.0"
+  }
+}
