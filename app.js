@@ -1,3 +1,4 @@
+import fs from 'fs';
 import clone from 'just-clone';
 import got from 'got';
 import puppeteer from 'puppeteer-extra';
@@ -16,25 +17,61 @@ const merged_url = "https://opensea.io/collection/m?search[numericTraits][0][nam
 
 const token_obj = { id: 0, traits: { tier: 0, alpha: 0, class: 0, mass: 0, merges: 0 }, image_url: "" };
 
-// should have 49 blue & 70 merged ones => use scroll
+// should have 45 blue & 93 yellow & 70 merged ones => use scroll
 // optimise scraping for alpha, yellows, reds, blues, top10, merged, on only one page ?
 //    - alpha & reds & yellows & blues & merged
 //    - top10
 
 const browser = await puppeteer.launch();
 const page = await browser.newPage();
-await page.goto(merged_url);
+await page.setViewport({
+  width: 21892,
+  height: 2164
+});
+await page.goto(yellows_url);
 await page.waitForSelector('.cf-browser-verification', { hidden: true });
-const __wired__ = _parseWiredVariable(await page.content());
-let assets = _extractAssets(__wired__);
+await page.waitForNetworkIdle();
+page.waitForTimeout(5000);
+// await autoScroll(page);
+// await page.waitForFunction(() => document.querySelectorAll('.AssetCardFooter--name') > 40);
+
+await page.waitForFunction(() => !(document.querySelector('.Image--loader') || document.querySelector('.Skeletonreact__SkeletonBlock-sc-9nopaf-0')));
+// await page.waitForFunction(() => !document.querySelector('.Skeletonreact__SkeletonBlock-sc-9nopaf-0'));
+// await page.waitForFunction(() => !document.querySelector('.Image--loader'));
+
+await page.screenshot({
+  path: 'sc.png',
+  fullPage: true
+});
+
+const content = await page.content();
+// const __wired__ = _parseWiredVariable(content);
+// let assets = _extractAssets(__wired__);
+
+fs.writeFile('content.html', JSON.stringify(content), () => {});
+// fs.writeFile('wired.json', JSON.stringify(__wired__), () => {});
 
 // assets.forEach(async (asset) => {
 //   console.log(await getTokenInfos(asset.tokenId));
 // })
 
-console.log(assets.length);
+// console.log(content.split('AssetCardFooter--name').length);
 
-await browser.close()
+
+
+let a = content.split('AssetCardFooter--name\">').map(s => {
+  if (s.startsWith('m(')) {
+    return s.split('</div>')[0]
+  }
+  else
+    return null;
+}).filter(s => s)
+console.log(a);
+console.log(a.length);
+
+
+
+await browser.close();
 
 
 
@@ -69,4 +106,24 @@ function deepSeal(object) {
     if (value && typeof value === "object") deepSeal(value);
   }
   return Object.seal(object);
+}
+
+
+async function autoScroll(page){
+  await page.evaluate(async () => {
+      await new Promise((resolve, reject) => {
+          var totalHeight = 0;
+          var distance = 100;
+          var timer = setInterval(() => {
+              var scrollHeight = document.body.scrollHeight;
+              window.scrollBy(0, distance);
+              totalHeight += distance;
+
+              if(totalHeight >= scrollHeight){
+                  clearInterval(timer);
+                  resolve();
+              }
+          }, 100);
+      });
+  });
 }
